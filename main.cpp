@@ -20,12 +20,16 @@ int main()
     assert(sizeof(map) == map_w*map_h+1); // +1 for the null terminated string
     float player_x = 3.456; // player x position
     float player_y = 2.345; // player y position
-    float player_a = 1.1245; // player view direction
+    float player_a = 8.1245; // player view direction
     const float fov = M_PI/3.; // field of view
 
     std::vector<uint32_t> colors(ncolors);
     for(size_t i = 0; i<ncolors; i++){
-        colors[i] = pack_color(rand()%255, rand()%255, rand()%255);
+         colors[i] = pack_color(rand()%255, rand()%255, rand()%255);
+            // colors[0] = pack_color(255, 0, 0);    // Red
+            // colors[1] = pack_color(0, 255, 0);    // Green
+            // colors[2] = pack_color(0, 0, 255);    // Blue
+            // colors[3] = pack_color(255, 255, 0);  // Yellow
     }
 
     const size_t rect_w = win_w/(map_w*2);
