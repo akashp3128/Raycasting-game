@@ -1,7 +1,8 @@
 #include "utility.h"
 #include <cassert>
 #include <fstream>
-
+#include <sys/stat.h>
+#include <unistd.h>
 
 
 uint32_t pack_color(const uint8_t r, const uint8_t g, const uint8_t b, const uint8_t a)
@@ -20,9 +21,13 @@ void unpack_color(const uint32_t &color, uint8_t &r, uint8_t &g, uint8_t &b, uin
 void drop_ppm_image(const std::string filename, const std::vector<uint32_t> &image, const size_t w, const size_t h)
 {
     assert(image.size() == w * h);
-    std::string directory = "output/";  // Specify the directory name
+    std::string directory = "output/";
     std::string filepath = directory + filename;
-    std::ofstream ofs(filepath, std::ios::binary);
+
+    // Create the output directory if it doesn't exist
+    mkdir(directory.c_str(), 0755);
+
+    std::ofstream ofs(filepath, std::ios::binary | std::ios::trunc);
     ofs << "P6\n" << w << " " << h << "\n255\n";
     for (size_t i = 0; i < h * w; ++i) {
         uint8_t r, g, b, a;
