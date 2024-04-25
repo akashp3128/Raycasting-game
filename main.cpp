@@ -9,49 +9,37 @@
 
 #include "texture.h"
 #include "utility.h"
-#include "drawing.h"
-#include "game.h"
+#include "framebuffer.h"
+#include "map.h"
 
+int wall_x_texcoord(const float x, const float y, Texture &tex_walls) {
+    float hitx = x - floor(x + 0.5);
+    float hity = y - floor(y + 0.5);
+    int tex = hitx * tex_walls.size;
 
-void test_texture_loading(const std::string& texture_path) {
-    Texture texture(texture_path);
-
-    assert(texture.count > 0);
-    assert(texture.size > 0);
-    assert(texture.img_w > 0);
-    assert(texture.img_h > 0);
-    assert(texture.img.size() == texture.img_w * texture.img_h);
-
-    std::cout << "Texture loading test passed!" << std::endl;
+    if (std::abs(hity) > std::abs(hitx))
+        tex = hity * tex_walls.size;
+    if (tex < 0)
+        tex += tex_walls.size;
+    assert(tex >= 0 && tex < (int)tex_walls.size);
+    return tex;
 }
 
+int main() {
+    const size_t win_w = 1024;
+    const size_t win_h = 512;
 
+    FrameBuffer fb(win_w, win_h);
+    Map map;
 
-int main()
-{
+    float player_x = 3.456;
+    float player_y = 2.345;
+    float player_a = 8.1245;
+    const float fov = M_PI / 3.;
 
+    const size_t rect_w = win_w / (map.width() * 2);
+    const size_t rect_h = win_h / map.height();
 
-    test_texture_loading("pics/walltext.png");
-    
-    const size_t win_w = 1024; // image width
-    const size_t win_h = 512;  // image height
-    std::vector<uint32_t> framebuffer(win_w * win_h, pack_color(255, 255, 255)); // the image itself, initialized to white
-
-    assert(sizeof(map) == map_w * map_h + 1); // +1 for the null terminated string
-    float player_x = 3.456; // player x position
-    float player_y = 2.345; // player y position
-    float player_a = 8.1245; // player view direction
-    const float fov = M_PI / 3.; // field of view
-
-    std::vector<uint32_t> colors(ncolors);
-    for (size_t i = 0; i < ncolors; i++) {
-        colors[i] = pack_color(rand() % 255, rand() % 255, rand() % 255);
-    }
-
-    const size_t rect_w = win_w / (map_w * 2);
-    const size_t rect_h = win_h / map_h;
-
-    // Load texture data for walls
     Texture wallTextureAtlas("pics/walltext.png");
     size_t wallTextureSize = wallTextureAtlas.size;
     size_t wallTextureCnt = wallTextureAtlas.count;
@@ -68,19 +56,18 @@ int main()
         ss << std::setfill('0') << std::setw(5) << frame << ".ppm";
         player_a += 2 * M_PI / 360;
 
-        framebuffer = std::vector<uint32_t>(win_w * win_h, pack_color(255, 255, 255));
-        for (size_t j = 0; j < map_h; j++) { //draw the map
-            for (size_t i = 0; i < map_w; i++) {
-                if (map[i + j * map_w] == ' ') continue; //skip empty spaces
+        fb.clear(pack_color(255, 255, 255));
+
+        for (size_t j = 0; j < map.height(); j++) { //draw the map
+            for (size_t i = 0; i < map.width(); i++) {
+                if (map.is_empty(i, j)) continue; //skip empty spaces
                 size_t rect_x = i * rect_w;
                 size_t rect_y = j * rect_h;
-                size_t texid = map[i + j * map_w] - '0';
+                size_t texid = map.get(i, j);
                 assert(texid < wallTextureCnt);
 
-                // Sample the color from the upper-left pixel of the texture
                 uint32_t color = wallTextureAtlas.get(0, 0, texid);
-
-                draw_rectangle(framebuffer, win_w, win_h, rect_x, rect_y, rect_w, rect_h, color);
+                fb.draw_rectangle(rect_x, rect_y, rect_w, rect_h, color);
             }
         }
 
@@ -91,25 +78,28 @@ int main()
             for (float t = 0; t < 20; t += .01) {
                 float cx = player_x + t * cos(angle);
                 float cy = player_y + t * sin(angle);
+                float dx = cos(angle);
+                float dy = sin(angle);
 
                 size_t pix_x = cx * rect_w;
                 size_t pix_y = cy * rect_h;
-                framebuffer[pix_x + pix_y * win_w] = pack_color(160, 160, 160); // this draws the visibility cone
+                fb.set_pixel(pix_x, pix_y, pack_color(160, 160, 160)); // this draws the visibility cone
 
-                if (map[int(cx) + int(cy) * map_w] != ' ') { // our ray touches a wall, so draw the vertical column to create an illusion of 3D
-                    size_t icolor = map[int(cx) + int(cy) * map_w] - '0';
-                    assert(icolor < ncolors);
-
-                    // Calculate texture coordinates
-                    float u = (float)(icolor % wallTextureCnt) / (float)wallTextureCnt;
-                    float v = std::max(0.0f, std::min(1.0f, (float)(int(cy)) / (float)map_h));
+                if (!map.is_empty(cx, cy)) { // our ray touches a wall, so draw the vertical column to create an illusion of 3D
+                    size_t texid = map.get(cx, cy);
+                    assert(texid < wallTextureCnt);
 
                     size_t column_height = win_h / (t * cos(angle - player_a));
 
-                    // Draw textured column
-                    std::vector<uint32_t> column = wallTextureAtlas.get_scaled_column(icolor, u * wallTextureSize, column_height);
-                    for (size_t y = 0; y < column_height; ++y) {
-                        framebuffer[win_w / 2 + i + (win_h / 2 - column_height / 2 + y) * win_w] = column[y];
+                    wall_x_texcoord(cx, cy, wallTextureAtlas);
+                    int pix_x = i + fb.w/2;
+
+                    std::vector<uint32_t> column = wallTextureAtlas.get_scaled_column(texid, wallTextureSize, column_height);
+                    for (size_t j = 0; j < column_height; j++) {
+                        int pix_y = j + fb.h/2 - column_height/2;
+                        if (pix_y>=0 && pix_y<(int)fb.h) {
+                            fb.set_pixel(pix_x, pix_y, column[j]);
+                        }
                     }
 
                     break;
@@ -117,7 +107,7 @@ int main()
             }
         }
 
-        drop_ppm_image(ss.str(), framebuffer, win_w, win_h);
+        drop_ppm_image(ss.str(), fb.img, fb.w, fb.h);
     }
 
     return 0;

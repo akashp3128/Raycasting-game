@@ -8,7 +8,7 @@
 #include "utility.h"
 
 Texture::Texture(const std::string& filename) : img_w(0), img_h(0), count(0), size(0), img() {
-    int width, height, channels;
+    int width, height, channels = -1;
     unsigned char* data = stbi_load(filename.c_str(), &width, &height, &channels, 0);
 
     if (!data) {
