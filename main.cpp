@@ -8,13 +8,31 @@
 #include <cassert>
 
 #include "texture.h"
-#include "stb_image.h"
 #include "utility.h"
 #include "drawing.h"
 #include "game.h"
 
+
+void test_texture_loading(const std::string& texture_path) {
+    Texture texture(texture_path);
+
+    assert(texture.count > 0);
+    assert(texture.size > 0);
+    assert(texture.img_w > 0);
+    assert(texture.img_h > 0);
+    assert(texture.img.size() == texture.img_w * texture.img_h);
+
+    std::cout << "Texture loading test passed!" << std::endl;
+}
+
+
+
 int main()
 {
+
+
+    test_texture_loading("pics/walltext.png");
+    
     const size_t win_w = 1024; // image width
     const size_t win_h = 512;  // image height
     std::vector<uint32_t> framebuffer(win_w * win_h, pack_color(255, 255, 255)); // the image itself, initialized to white
@@ -28,28 +46,22 @@ int main()
     std::vector<uint32_t> colors(ncolors);
     for (size_t i = 0; i < ncolors; i++) {
         colors[i] = pack_color(rand() % 255, rand() % 255, rand() % 255);
-        // colors[0] = pack_color(255, 0, 0);    // Red
-        // colors[1] = pack_color(0, 255, 0);    // Green
-        // colors[2] = pack_color(0, 0, 255);    // Blue
-        // colors[3] = pack_color(255, 255, 0);  // Yellow
     }
 
     const size_t rect_w = win_w / (map_w * 2);
     const size_t rect_h = win_h / map_h;
 
     // Load texture data for walls
-    std::vector<uint8_t> wallTextureAtlas = loadTexture("pics/walltext.png");
-    int wallTextureWidth, wallTextureHeight, wallTextureChannels;
-    stbi_info("pics/walltext.png", &wallTextureWidth, &wallTextureHeight, &wallTextureChannels);
-    size_t wallTextureSize = wallTextureWidth;
-    size_t wallTextureCnt = wallTextureWidth / wallTextureHeight;
+    Texture wallTextureAtlas("pics/walltext.png");
+    size_t wallTextureSize = wallTextureAtlas.size;
+    size_t wallTextureCnt = wallTextureAtlas.count;
 
-    std::cout << "Texture Atlas Dimensions: " << wallTextureWidth << "x" << wallTextureHeight << std::endl;
+    std::cout << "Texture Atlas Dimensions: " << wallTextureAtlas.img_w << "x" << wallTextureAtlas.img_h << std::endl;
     std::cout << "Number of Textures: " << wallTextureCnt << std::endl;
-    std::cout << "Number of Channels: " << wallTextureChannels << std::endl;
-    std::cout << "First few pixels: " << static_cast<int>(wallTextureAtlas[0]) << ", "
-                                    << static_cast<int>(wallTextureAtlas[1]) << ", "
-                                    << static_cast<int>(wallTextureAtlas[2]) << ", ..." << std::endl;
+    std::cout << "Number of Channels: 4" << std::endl;
+    std::cout << "First few pixels: " << static_cast<int>(wallTextureAtlas.img[0]) << ", "
+                                      << static_cast<int>(wallTextureAtlas.img[1]) << ", "
+                                      << static_cast<int>(wallTextureAtlas.img[2]) << ", ..." << std::endl;
 
     for (size_t frame = 0; frame < 360; frame++) {
         std::stringstream ss;
@@ -66,16 +78,11 @@ int main()
                 assert(texid < wallTextureCnt);
 
                 // Sample the color from the upper-left pixel of the texture
-                size_t texture_offset = texid * wallTextureSize * wallTextureChannels;
-                uint32_t color = pack_color(
-                    wallTextureAtlas[texture_offset],
-                    wallTextureAtlas[texture_offset + 1],
-                    wallTextureAtlas[texture_offset + 2]
-                );
+                uint32_t color = wallTextureAtlas.get(0, 0, texid);
 
-        draw_rectangle(framebuffer, win_w, win_h, rect_x, rect_y, rect_w, rect_h, color);
-    }
-}
+                draw_rectangle(framebuffer, win_w, win_h, rect_x, rect_y, rect_w, rect_h, color);
+            }
+        }
 
         //heart of the 3d engine
         for (size_t i = 0; i < win_w / 2; i++) { //draw visibility cone and 3D view
@@ -100,14 +107,9 @@ int main()
                     size_t column_height = win_h / (t * cos(angle - player_a));
 
                     // Draw textured column
+                    std::vector<uint32_t> column = wallTextureAtlas.get_scaled_column(icolor, u * wallTextureSize, column_height);
                     for (size_t y = 0; y < column_height; ++y) {
-                        size_t texture_y = (v * wallTextureHeight) * wallTextureWidth * wallTextureChannels;
-                        size_t texture_offset = texture_y + (u * wallTextureSize * wallTextureChannels);
-                        framebuffer[win_w / 2 + i + (win_h / 2 - column_height / 2 + y) * win_w] = pack_color(
-                            wallTextureAtlas[texture_offset + 0],
-                            wallTextureAtlas[texture_offset + 1],
-                            wallTextureAtlas[texture_offset + 2]
-                        );
+                        framebuffer[win_w / 2 + i + (win_h / 2 - column_height / 2 + y) * win_w] = column[y];
                     }
 
                     break;
