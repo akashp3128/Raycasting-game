@@ -1,32 +1,35 @@
 #include "map.h"
+#include <cassert>
+#include <iostream>
+#include <string>
 
- const char Map::map[] = "1010222122220000"
-                         "1              0"
-                         "1     11111    0"
-                         "1        3     0"
-                         "4    2    3  110"
-                         "4    5    3    0"
-                         "0    14000     0"
-                         "3    0    100  0"
-                         "3    0    1 0  0"
-                         "3    1  5   2  2"
-                         "0    1      2  2"
-                         "2    1    1    0"
-                         "0         0    0"
-                         "0    0000000   0"
-                         "0              0"
-                         "0002244222200000";
+const char Map::mapData[] = "1010222122220000"
+                            "1000000000000000"
+                            "1000001111100000"
+                            "1000030000000000"
+                            "4000203011000000"
+                            "4000503000000000"
+                            "0001400000000000"
+                            "3000000100000000"
+                            "3000001000000000"
+                            "3000105002000000"
+                            "0000001000200000"
+                            "2000000100100000"
+                            "0000000000000000"
+                            "0000000000000000"
+                            "0000000000000000"
+                            "0002244222200000";
 
 Map::Map() {
-    assert(sizeof(map) == w * h + 1); // +1 for the null-terminated string
+    assert(sizeof(mapData) == w * h + 1); // +1 for the null-terminated string
 }
 
 int Map::get(const size_t i, const size_t j) {
-    assert(i < w && j < h && sizeof(map) == w * h + 1);
-    return map[i + j * w] - '0';
+    assert(i < w && j < h && sizeof(mapData) == w * h + 1);
+    return mapData[i + j * w] - '0';
 }
 
 bool Map::is_empty(const size_t i, const size_t j) {
-    assert(i < w && j < h && sizeof(map) == w * h + 1);
-    return map[i + j * w] == ' ';
+    assert(i < w && j < h && sizeof(mapData) == w * h + 1);
+    return mapData[i + j * w] == ' ';
 }
