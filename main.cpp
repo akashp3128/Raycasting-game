@@ -15,24 +15,24 @@
 #include "player.h"
 
 // Function to calculate the texture coordinate for a given wall intersection point
-int wall_x_texcoord(const float x, const float y, Texture &tex_walls) {
+int wall_x_texcoord(const float hitx, const float hity, Texture &tex_walls) {
     // Calculate the hit position relative to the cell
-    float hitx = x - floor(x);
-    float hity = y - floor(y);
+    float x = hitx - floor(hitx+1);
+    float y = hity - floor(hity);
 
     // Calculate the texture coordinate based on the hit position
-    int tex = static_cast<int>(hitx * tex_walls.size);
+    int tex = static_cast<int>(x * tex_walls.size);
 
-    // If the hit position is closer to the vertical edge, use the y-coordinate
-    if (std::abs(hity) > std::abs(hitx)) {
-        tex = static_cast<int>(hity * tex_walls.size);
-    }
 
-    // Ensure the texture coordinate is within the valid range
-    tex = (tex + tex_walls.size) % tex_walls.size;
 
-    assert(tex >= 0 && tex < static_cast<int>(tex_walls.size));
+    if (std::abs(y)>std::abs(x)) // we need to determine whether we hit a "vertical" or a "horizontal" wall (w.r.t the map)
+        tex = y*tex_walls.size;
+    if (tex<0) // do not forget x_texcoord can be negative, fix that
+        tex += tex_walls.size;
+    assert(tex>=0 && tex < static_cast <int>(tex_walls.size));
     return tex;
+
+
 }
 
 // Function to render the scene
@@ -62,12 +62,10 @@ void render(FrameBuffer &fb, Map &map, Texture &tex_walls, float player_x, float
     // Render the visibility cone
     for (size_t i = 0; i < fb.w / 2; i++) {
         float angle = player_a - fov / 2 + fov * i / static_cast<float>(fb.w / 2);
-        std::cout << "Angle: " << angle << std::endl;
 
         for (float t = 0; t < 20; t += 0.01) {
             float cx = player_x + t * cos(angle);
             float cy = player_y + t * sin(angle);
-            std::cout << "Distance: " << t << ", Coordinates: (" << cx << ", " << cy << ")" << std::endl;
 
 
             size_t pix_x = cx * rect_w;
@@ -76,45 +74,43 @@ void render(FrameBuffer &fb, Map &map, Texture &tex_walls, float player_x, float
 
             // Check if the cell is a wall
             // Check if the cell is a wall
-if (!map.is_empty(cx, cy)) {
-    size_t texid = map.get(cx, cy);
-    std::cout << "Intersection point: (" << cx << ", " << cy << "), Texture ID: " << texid << std::endl;
-    if (texid >= tex_walls.count) {
-        // Skip if the texture ID is out of range
-        continue;
-    }
+            if (!map.is_empty(cx, cy)) {
+                size_t texid = map.get(cx, cy);
 
-    // Calculate the height of the wall column
-    float cos_angle = cos(angle - player_a);
-    if (std::abs(cos_angle) < 1e-6) {
-        // Skip if cos_angle is very small or close to zero
-        continue;
-    }
-    size_t column_height = std::min(static_cast<size_t>(fb.h / (t * cos_angle)), fb.h);
+            if (texid >= tex_walls.count) {
+                // Skip if the texture ID is out of range
+                continue;
+             }
 
-    // Calculate the texture coordinate for the wall
-    int tex_coord = wall_x_texcoord(cx, cy, tex_walls);
-    std::cout << "Intersection point: (" << cx << ", " << cy << ")" << std::endl;
-std::cout << "hitx: " << cx - floor(cx) << ", hity: " << cy - floor(cy) << std::endl;
-std::cout << "Texture coordinate: " << tex_coord << std::endl;
+            // Calculate the height of the wall column
+            float cos_angle = cos(angle - player_a);
+            if (std::abs(cos_angle) < 1e-6) {
+                // Skip if cos_angle is very small or close to zero
+                continue;
+             }
+            size_t column_height = std::min(static_cast<size_t>(fb.h / (t * cos_angle)), fb.h);
 
-    int pix_x = i + fb.w / 2;
+            // Calculate the texture coordinate for the wall
+            int tex_coord = wall_x_texcoord(cx, cy, tex_walls);
 
-    std::vector<uint32_t> column = tex_walls.get_scaled_column(tex_coord, texid, column_height);
+            int pix_x = i + fb.w / 2;
 
-    // Draw the wall column
-    for (size_t j = 0; j < column_height; j++) {
-        int pix_y = j + fb.h / 2 - column_height / 2;
-        if (pix_x >= 0 && pix_x < static_cast<int>(fb.w) && pix_y >= 0 && pix_y < static_cast<int>(fb.h)) {
-            fb.set_pixel(pix_x, pix_y, column[j]);
-        }
-    }
+            std::vector<uint32_t> column = tex_walls.get_scaled_column(tex_coord, texid, column_height);
 
-    break;
-}
+            // Draw the wall column
+            for (size_t j = 0; j < column_height; j++) {
+                int pix_y = j + fb.h / 2 - column_height / 2;
+                if (pix_x >= 0 && pix_x < static_cast<int>(fb.w) && pix_y >= 0 && pix_y < static_cast<int>(fb.h)) {
+                    fb.set_pixel(pix_x, pix_y, column[j]);
+                }
+            }
+
+            break;
+            }
         }
     }
 }
+
 
 int main() {
     // Set up the window dimensions
@@ -136,12 +132,6 @@ int main() {
     // Load the wall textures
     Texture tex_walls("walltext.png");
 
-    // Print texture information
-    std::cout << "Loaded texture from: " << "walltext.png" << std::endl;
-    std::cout << "Number of Textures: " << tex_walls.count << std::endl;
-    std::cout << "Texture Size: " << tex_walls.size << std::endl;
-    std::cout << "Total Image Width: " << tex_walls.img_w << std::endl;
-    std::cout << "Total Image Height: " << tex_walls.img_h << std::endl;
 
     // Render and save frames
     for (size_t frame = 0; frame < 360; frame++) {
