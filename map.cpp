@@ -3,30 +3,38 @@
 #include <iostream>
 #include <string>
 
-const char Map::mapData[] = "1010222122220000"
-                            "1000000000000000"
-                            "1000001111100000"
-                            "1000030000000000"
-                            "4000203011000000"
-                            "4000503000000000"
-                            "0001400000000000"
-                            "3000000100000000"
-                            "3000001000000000"
-                            "3000105002000000"
-                            "0000001000200000"
-                            "2000000100100000"
-                            "0000000000000000"
-                            "0000000000000000"
-                            "0000000000000000"
-                            "0002244222200000";
+const char Map::mapData[]=  "0000222222220000"\
+                            "1              0"\
+                            "1      11111   0"\
+                            "1     0        0"\
+                            "0     0  1110000"\
+                            "0     3        0"\
+                            "0   10000      0"\
+                            "0   0   11100  0"\
+                            "0   0   0      0"\
+                            "0   0   1  00000"\
+                            "0       1      0"\
+                            "2       1      0"\
+                            "0       0      0"\
+                            "0 0000000      0"\
+                            "0              0"\
+                            "0002222222200000"; 
 
 Map::Map() {
     assert(sizeof(mapData) == w * h + 1); // +1 for the null-terminated string
 }
 
+
 int Map::get(const size_t i, const size_t j) {
     assert(i < w && j < h && sizeof(mapData) == w * h + 1);
-    return mapData[i + j * w] - '0';
+    char c = mapData[i + j * w];
+    if (std::isdigit(c)) {
+        return c - '0';
+    } else {
+        // Return a default or invalid texture ID value
+        // or handle the non-digit character case as per your requirements
+        return 0;
+    }
 }
 
 bool Map::is_empty(const size_t i, const size_t j) {

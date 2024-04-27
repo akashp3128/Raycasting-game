@@ -17,18 +17,18 @@
 // Function to calculate the texture coordinate for a given wall intersection point
 int wall_x_texcoord(const float x, const float y, Texture &tex_walls) {
     // Calculate the hit position relative to the cell
-    float hitx = x - floor(x + 0.5);
-    float hity = y - floor(y + 0.5);
+    float hitx = x - floor(x);
+    float hity = y - floor(y);
 
     // Calculate the texture coordinate based on the hit position
-    int tex = static_cast<int>(hitx * static_cast<float>(tex_walls.size - 1));
+    int tex = static_cast<int>(hitx * tex_walls.size);
 
     // If the hit position is closer to the vertical edge, use the y-coordinate
     if (std::abs(hity) > std::abs(hitx)) {
-        tex = static_cast<int>(hity * static_cast<float>(tex_walls.size - 1));
+        tex = static_cast<int>(hity * tex_walls.size);
     }
 
-    // Clamp the texture coordinate to the valid range
+    // Ensure the texture coordinate is within the valid range
     tex = (tex + tex_walls.size) % tex_walls.size;
 
     assert(tex >= 0 && tex < static_cast<int>(tex_walls.size));
@@ -60,71 +60,60 @@ void render(FrameBuffer &fb, Map &map, Texture &tex_walls, float player_x, float
     }
 
     // Render the visibility cone
-for (size_t i = 0; i < fb.w / 2; i++) {
-    float angle = player_a - fov / 2 + fov * i / static_cast<float>(fb.w / 2);
+    for (size_t i = 0; i < fb.w / 2; i++) {
+        float angle = player_a - fov / 2 + fov * i / static_cast<float>(fb.w / 2);
+        std::cout << "Angle: " << angle << std::endl;
 
-    for (float t = 0; t < 20; t += 0.01) {
-        float cx = player_x + t * cos(angle);
-        float cy = player_y + t * sin(angle);
+        for (float t = 0; t < 20; t += 0.01) {
+            float cx = player_x + t * cos(angle);
+            float cy = player_y + t * sin(angle);
+            std::cout << "Distance: " << t << ", Coordinates: (" << cx << ", " << cy << ")" << std::endl;
 
-        size_t pix_x = cx * rect_w;
-        size_t pix_y = cy * rect_h;
-        fb.set_pixel(pix_x, pix_y, pack_color(160, 160, 160));
 
-        // Check if the cell is a wall
-        if (!map.is_empty(cx, cy)) {
-            size_t texid = map.get(cx, cy);
-            std::cout << "texid: " << texid << ", cx: " << cx << ", cy: " << cy << std::endl;
-            if (texid >= tex_walls.count) {
-                // Skip if the texture ID is out of range
-                std::cout << "Invalid texid: " << texid << ", tex_walls.count: " << tex_walls.count << std::endl;
-                continue;
-            }
+            size_t pix_x = cx * rect_w;
+            size_t pix_y = cy * rect_h;
+            fb.set_pixel(pix_x, pix_y, pack_color(160, 160, 160));
 
-            // Calculate the height of the wall column
-            float cos_angle = cos(angle - player_a);
-            if (std::abs(cos_angle) < 1e-6) {
-                // Handle the case where cos_angle is very small or close to zero
-                std::cerr << "Error: cos_angle is too small." << std::endl;
-                continue;
-            }
-            size_t column_height = static_cast<size_t>(fb.h / (t * cos_angle));
+            // Check if the cell is a wall
+            // Check if the cell is a wall
+if (!map.is_empty(cx, cy)) {
+    size_t texid = map.get(cx, cy);
+    std::cout << "Intersection point: (" << cx << ", " << cy << "), Texture ID: " << texid << std::endl;
+    if (texid >= tex_walls.count) {
+        // Skip if the texture ID is out of range
+        continue;
+    }
 
-            // Add a check to ensure column_height is within a reasonable range
-            if (column_height > std::numeric_limits<size_t>::max() / sizeof(uint32_t)) {
-                std::cerr << "Error: column_height exceeds maximum allowed size." << std::endl;
-                continue;
-            }
+    // Calculate the height of the wall column
+    float cos_angle = cos(angle - player_a);
+    if (std::abs(cos_angle) < 1e-6) {
+        // Skip if cos_angle is very small or close to zero
+        continue;
+    }
+    size_t column_height = std::min(static_cast<size_t>(fb.h / (t * cos_angle)), fb.h);
 
-            // Calculate the texture coordinate for the wall
-            int tex_coord = wall_x_texcoord(cx, cy, tex_walls);
-            std::cout << "tex_coord: " << tex_coord << ", texture_id: " << texid << std::endl;
+    // Calculate the texture coordinate for the wall
+    int tex_coord = wall_x_texcoord(cx, cy, tex_walls);
+    std::cout << "Intersection point: (" << cx << ", " << cy << ")" << std::endl;
+std::cout << "hitx: " << cx - floor(cx) << ", hity: " << cy - floor(cy) << std::endl;
+std::cout << "Texture coordinate: " << tex_coord << std::endl;
 
-            int pix_x = i + fb.w / 2;
+    int pix_x = i + fb.w / 2;
 
-            std::cout << "Before get_scaled_column - tex_coord: " << tex_coord << ", texture_id: " << texid << std::endl;
-            std::vector<uint32_t> column = tex_walls.get_scaled_column(tex_coord, texid, column_height);
-            std::cout << "After get_scaled_column - tex_coord: " << tex_coord << ", texture_id: " << texid << std::endl;
-            if (column.empty()) {
-                std::cerr << "Error: get_scaled_column returned an empty vector" << std::endl;
-                // Handle the error or take appropriate action
-            } else {
-                std::cout << "Column vector size: " << column.size() << std::endl;
-                // Perform operations on the non-empty vector
-            }
+    std::vector<uint32_t> column = tex_walls.get_scaled_column(tex_coord, texid, column_height);
 
-            // Draw the wall column
-            for (size_t j = 0; j < column_height; j++) {
-                int pix_y = j + fb.h / 2 - column_height / 2;
-                if (pix_y >= 0 && pix_y < static_cast<int>(fb.h)) {
-                    fb.set_pixel(pix_x, pix_y, column[j]);
-                }
-            }
-
-            break;
+    // Draw the wall column
+    for (size_t j = 0; j < column_height; j++) {
+        int pix_y = j + fb.h / 2 - column_height / 2;
+        if (pix_x >= 0 && pix_x < static_cast<int>(fb.w) && pix_y >= 0 && pix_y < static_cast<int>(fb.h)) {
+            fb.set_pixel(pix_x, pix_y, column[j]);
         }
     }
+
+    break;
 }
+        }
+    }
 }
 
 int main() {
