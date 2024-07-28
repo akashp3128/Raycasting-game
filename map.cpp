@@ -24,20 +24,18 @@ Map::Map() {
     assert(sizeof(mapData) == w * h + 1); // +1 for the null-terminated string
 }
 
-
-int Map::get(const size_t i, const size_t j) {
+int Map::get(const size_t i, const size_t j) const {
     assert(i < w && j < h && sizeof(mapData) == w * h + 1);
     char c = mapData[i + j * w];
     if (std::isdigit(c)) {
         return c - '0';
     } else {
-        // Return a default or invalid texture ID value
-        // or handle the non-digit character case as per your requirements
+        std::cerr << "Warning: Invalid map data at (" << i << ", " << j << "): '" << c << "'" << std::endl;
         return 0;
     }
 }
 
-bool Map::is_empty(const size_t i, const size_t j) {
+bool Map::is_empty(const size_t i, const size_t j) const {
     assert(i < w && j < h && sizeof(mapData) == w * h + 1);
     return mapData[i + j * w] == ' ';
 }
