@@ -47,6 +47,8 @@ void render(FrameBuffer &fb, const Map &map, Texture &tex_walls, float player_x,
            // uint32_t color = pack_color(0, 0, texid); // Blue for walls...change this to add texture
 
             //fb.draw_rectangle(rect_x, rect_y, rect_w, rect_h, color);
+
+            /*load textures to map walls*/
             for (size_t ty = 0; ty < rect_h; ty++)
             {
                 for (size_t tx = 0; tx < rect_w; tx++)
@@ -60,45 +62,54 @@ void render(FrameBuffer &fb, const Map &map, Texture &tex_walls, float player_x,
         }
     }
 
-    // Cast rays and draw walls
-    for (size_t i = 0; i < fb.w / 2; i++) {
-        float angle = player_a - fov / 2 + fov * i / static_cast<float>(fb.w / 2);
-        for (float t = 0; t < 20; t += 0.01) {
-            float cx = player_x + t * cos(angle);
-            float cy = player_y + t * sin(angle);
+   // Cast rays and draw walls
+for (size_t i = 0; i < fb.w / 2; i++) {
+    float angle = player_a - fov / 2 + fov * i / static_cast<float>(fb.w / 2);
+    for (float t = 0; t < 20; t += 0.01) {
+        float cx = player_x + t * cos(angle);
+        float cy = player_y + t * sin(angle);
 
-            size_t pix_x = static_cast<size_t>(cx * rect_w);
-            size_t pix_y = static_cast<size_t>(cy * rect_h);
-            
-            fb.set_pixel(pix_x, pix_y, pack_color(255, 0, 0));
+        size_t pix_x = static_cast<size_t>(cx * rect_w);
+        size_t pix_y = static_cast<size_t>(cy * rect_h);
+        fb.set_pixel(pix_x, pix_y, pack_color(255, 0, 0));
 
-            if (!map.is_empty(cx, cy)) {
-                size_t texid = map.get(cx, cy);
-                if (texid >= tex_walls.count) {
-                    std::cerr << "Invalid texture ID: " << texid << " at map position (" << cx << ", " << cy << ")" << std::endl;
-                    continue;
-                }
-
-                float cos_angle = cos(angle - player_a);
-                if (std::abs(cos_angle) < 1e-6) {
-                    continue;
-                }
-                size_t column_height = std::min(static_cast<size_t>(fb.h / (t * cos_angle)), fb.h);
-
-                int tex_coord = wall_x_texcoord(cx, cy, tex_walls);
-                int pix_x = static_cast<int>(i + fb.w / 2);
-
-                for (size_t j = 0; j < column_height; j++) {
-                    int pix_y = static_cast<int>(j + fb.h / 2 - column_height / 2);
-                    if (pix_x >= 0 && pix_x < static_cast<int>(fb.w) && pix_y >= 0 && pix_y < static_cast<int>(fb.h)) {
-                        uint8_t intensity = static_cast<uint8_t>(255 * j / column_height);
-                        fb.set_pixel(pix_x, pix_y, pack_color(0, intensity, 0));
-                    }
-                }
-                break;
+        if (!map.is_empty(cx, cy)) {
+            size_t texid = map.get(cx, cy);
+            if (texid >= tex_walls.count) {
+                std::cerr << "Invalid texture ID: " << texid << " at map position (" << cx << ", " << cy << ")" << std::endl;
+                continue;
             }
+
+            float cos_angle = cos(angle - player_a);
+            if (std::abs(cos_angle) < 1e-6) {
+                continue;
+            }
+
+            size_t column_height = std::min(static_cast<size_t>(fb.h / (t * cos_angle)), fb.h);
+            int tex_coord = wall_x_texcoord(cx, cy, tex_walls);
+            int pix_x = static_cast<int>(i + fb.w / 2);
+
+            // Get the texture column
+            std::vector<uint32_t> column = tex_walls.get_scaled_column(tex_coord, texid, column_height);
+
+            for (size_t j = 0; j < column_height; j++) {
+                int pix_y = static_cast<int>(j + fb.h / 2 - column_height / 2);
+                if (pix_x >= 0 && pix_x < static_cast<int>(fb.w) && pix_y >= 0 && pix_y < static_cast<int>(fb.h)) {
+                    // Apply distance-based shading
+                    uint32_t color = column[j];
+                    float distance_factor = 1.0f - std::min(t / 20.0f, 1.0f);
+                    uint8_t r, g, b, a;
+                    unpack_color(color, r, g, b, a);
+                    r = static_cast<uint8_t>(r * distance_factor);
+                    g = static_cast<uint8_t>(g * distance_factor);
+                    b = static_cast<uint8_t>(b * distance_factor);
+                    fb.set_pixel(pix_x, pix_y, pack_color(r, g, b, a));
+                }
+            }
+            break;
         }
     }
+}
 
     // Draw player position and direction
     size_t player_pix_x = static_cast<size_t>(player_x * rect_w);
