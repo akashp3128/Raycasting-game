@@ -1,4 +1,4 @@
-
+#define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #include "texture.h"
 #include <vector>
@@ -12,13 +12,16 @@ Texture::Texture(const std::string& filename) : img_w(0), img_h(0), count(0), si
     unsigned char* data = stbi_load(filename.c_str(), &width, &height, &channels, 0);
 
     if (!data) {
-        std::cerr << "Failed to load texture: " << filename << std::endl;
+        // Improved error reporting with stbi_failure_reason
+        std::cerr << "Failed to load texture: " << filename << " - " << stbi_failure_reason() << std::endl;
         return;
     }
 
-    std::cout << "Loaded texture from: " << filename << std::endl;
+    // Detailed logging of loaded texture properties
+    std::cout << "Loaded texture: " << filename << " (Width: " << width << ", Height: " << height 
+              << ", Channels: " << channels << ")" << std::endl;
 
-    if (channels != 4) {
+    if (4 != channels) {
         std::cerr << "Error: the texture must be a 32-bit image" << std::endl;
         stbi_image_free(data);
         return;
@@ -35,12 +38,9 @@ Texture::Texture(const std::string& filename) : img_w(0), img_h(0), count(0), si
     img_w = width;
     img_h = height;
 
-    std::cout << "Number of Textures: " << count << std::endl;
-    std::cout << "Texture Size: " << size << std::endl;
-    std::cout << "Total Image Width: " << img_w << std::endl;
-    std::cout << "Total Image Height: " << img_h << std::endl;
+    std::cout << "Number of Textures: " << count << ", Texture Size: " << size << std::endl;
 
-    img = std::vector<uint32_t>(width * height);
+    img.resize(width * height);
 
     for (int j = 0; j < height; j++) {
         for (int i = 0; i < width; i++) {
@@ -57,11 +57,12 @@ Texture::Texture(const std::string& filename) : img_w(0), img_h(0), count(0), si
 
 uint32_t& Texture::get(const size_t tex_coord, const size_t texture_id, const size_t j) {
     assert(tex_coord < size && j < size && texture_id < count);
-    return img[tex_coord + texture_id * size * size + j];
+    size_t index = tex_coord + texture_id * size * size + j * size;
+    assert(index < img.size());
+    return img[index];
 }
 
 std::vector<uint32_t> Texture::get_scaled_column(const size_t tex_coord, const size_t texture_id, const size_t column_height) {
-    std::cout << "tex_coord: " << tex_coord << ", texture_id: " << texture_id << std::endl;
     assert(tex_coord < size && texture_id < count);
 
     if (column_height > std::numeric_limits<size_t>::max() / sizeof(uint32_t)) {
@@ -69,20 +70,10 @@ std::vector<uint32_t> Texture::get_scaled_column(const size_t tex_coord, const s
         return std::vector<uint32_t>();
     }
 
-    std::cout << "column_height: " << column_height << std::endl;
-
     std::vector<uint32_t> column(column_height);
     for (size_t y = 0; y < column_height; y++) {
-        int j = static_cast<int>(y * static_cast<float>(size) / column_height);
+        size_t j = static_cast<size_t>(y * static_cast<float>(size) / column_height);
         column[y] = get(tex_coord, texture_id, j);
-    }
-
-    std::cout << "After get_scaled_column - tex_coord: " << tex_coord << ", texture_id: " << texture_id << std::endl;
-
-    // Add print statements here to inspect the contents of the `column` vector
-    std::cout << "Column vector contents:" << std::endl;
-    for (size_t i = 0; i < column.size(); i++) {
-        std::cout << "column[" << i << "]: " << column[i] << std::endl;
     }
 
     return column;

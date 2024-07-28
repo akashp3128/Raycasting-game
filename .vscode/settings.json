@@ -111,6 +111,8 @@
     "unordered_map": "cpp",
     "variant": "cpp",
     "vector": "cpp",
-    "algorithm": "cpp"
-  }
+    "algorithm": "cpp",
+    "execution": "cpp"
+  },
+  "CodeGPT.apiKey": "CodeGPT Plus Beta"
 }
