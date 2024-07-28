@@ -1,19 +1,19 @@
 #ifndef TEXTURE_H
 #define TEXTURE_H
 
-
 #include <vector>
-#include <cstdint>
 #include <string>
+#include <cstdint>
 
-struct Texture {
+class Texture {
+public:
     size_t img_w, img_h; // overall image dimensions
-    size_t count, size; // number of textures and size in pixels
-    std::vector<uint32_t> img; // textures storage container
+    size_t count, size; // number of textures and size of each texture
+    std::vector<uint32_t> img; // the array of pixels
 
-    Texture(const std::string& filename);
-    uint32_t& get(const size_t i, const size_t j, const size_t idx); // get the pixel (i,j) from the texture idx
-    std::vector<uint32_t> get_scaled_column(const size_t texture_id, const size_t tex_coord, const size_t column_height); // retrieve one column (tex_coord) from the texture texture_id and scale it to the destination size
+    Texture(const std::string &filename);
+    uint32_t& get(const size_t tex_coord, const size_t texture_id, const size_t j);
+    std::vector<uint32_t> get_scaled_column(const size_t tex_coord, const size_t texture_id, const size_t column_height);
 };
 
-#endif
+#endif // TEXTURE_H

@@ -1,8 +1,6 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #include "texture.h"
-#include <vector>
-#include <cstdint>
 #include <iostream>
 #include <cassert>
 #include "utility.h"
@@ -12,12 +10,10 @@ Texture::Texture(const std::string& filename) : img_w(0), img_h(0), count(0), si
     unsigned char* data = stbi_load(filename.c_str(), &width, &height, &channels, 0);
 
     if (!data) {
-        // Improved error reporting with stbi_failure_reason
         std::cerr << "Failed to load texture: " << filename << " - " << stbi_failure_reason() << std::endl;
         return;
     }
 
-    // Detailed logging of loaded texture properties
     std::cout << "Loaded texture: " << filename << " (Width: " << width << ", Height: " << height 
               << ", Channels: " << channels << ")" << std::endl;
 
@@ -53,6 +49,10 @@ Texture::Texture(const std::string& filename) : img_w(0), img_h(0), count(0), si
     }
 
     stbi_image_free(data);
+
+    for (size_t i = 0; i < count; i++) {
+        std::cout << "Texture " << i << " loaded at offset " << i * size << std::endl;
+    }
 }
 
 uint32_t& Texture::get(const size_t tex_coord, const size_t texture_id, const size_t j) {
