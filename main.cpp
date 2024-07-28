@@ -44,8 +44,19 @@ void render(FrameBuffer &fb, const Map &map, Texture &tex_walls, float player_x,
                 std::cerr << "Invalid texture ID in map: " << texid << " at (" << i << ", " << j << ")" << std::endl;
                 continue;
             }
-            uint32_t color = pack_color(0, 0, 255); // Blue for walls...change this to add texture
-            fb.draw_rectangle(rect_x, rect_y, rect_w, rect_h, color);
+           // uint32_t color = pack_color(0, 0, texid); // Blue for walls...change this to add texture
+
+            //fb.draw_rectangle(rect_x, rect_y, rect_w, rect_h, color);
+            for (size_t ty = 0; ty < rect_h; ty++)
+            {
+                for (size_t tx = 0; tx < rect_w; tx++)
+                {
+                    size_t tex_x = (tx * tex_walls.size) / rect_w;
+                    size_t tex_y = (ty * tex_walls.size) / rect_h;
+                    uint32_t color = tex_walls.get(tex_x, texid, tex_y);
+                    fb.set_pixel(rect_x + tx, rect_y + ty, color);
+                }
+            }
         }
     }
 
@@ -109,9 +120,9 @@ int main() {
     FrameBuffer fb(win_w, win_h);
     Map map;
 
-    float player_x = 1.456;
-    float player_y = 2.345;
-    float player_a = 3.1245;
+    float player_x = 10.456;
+    float player_y = 10.345;
+    float player_a = 10.1245;
     const float fov = M_PI / 3.0;
 
     Texture tex_walls("walltext.png");
