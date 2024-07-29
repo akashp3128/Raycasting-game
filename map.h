@@ -1,22 +1,14 @@
 #ifndef MAP_H
 #define MAP_H
 
-#include <cstddef>
+#include <cstdlib>
 
-class Map {
-public:
+struct Map {
     static const size_t w = 16;
     static const size_t h = 16;
-    static const char mapData[];
-
-    Map();
+    static const char map[];
     int get(const size_t i, const size_t j) const;
-    bool is_empty(const size_t i, const size_t j) const;
-    size_t width() const { return w; }
-    size_t height() const { return h; }
-    
-    // Add this line to declare the print function
-    void print() const;
+    int get(const float x, const float y) const;
 };
 
 #endif // MAP_H

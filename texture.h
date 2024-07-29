@@ -7,13 +7,14 @@
 
 class Texture {
 public:
-    size_t img_w, img_h; // overall image dimensions
-    size_t count, size; // number of textures and size of each texture
-    std::vector<uint32_t> img; // the array of pixels
+    size_t img_w, img_h; // texture dimensions
+    size_t count;        // total number of textures
+    size_t size;         // size of each texture (assuming square textures)
+    std::vector<uint32_t> img; // the texture data
 
     Texture(const std::string &filename);
-    uint32_t& get(const size_t tex_coord, const size_t texture_id, const size_t j);
-    std::vector<uint32_t> get_scaled_column(const size_t tex_coord, const size_t texture_id, const size_t column_height);
+    uint32_t get(const size_t i, const size_t j) const;
+    std::vector<uint32_t> get_scaled_column(size_t texture_x, size_t texture_id, size_t column_height) const;
 };
 
 #endif // TEXTURE_H
